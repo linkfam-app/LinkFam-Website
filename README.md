@@ -1,2 +1,0 @@
-# LinkFam-Website
-index.md
