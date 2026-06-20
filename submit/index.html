@@ -305,16 +305,15 @@
         });
 
         if (!response.ok) {
-          throw new Error("Submission failed");
-        }
+          const errorText = await response.text();
+          throw new Error(errorText);
+      }
 
         document.getElementById("formCard").style.display = "none";
         document.getElementById("successMessage").style.display = "block";
 
-      } catch (error) {
-        alert("Something went wrong. Please try again.");
-        console.error(error);
-      }
+      } alert("Something went wrong: " + error.message);
+    console.error(error);
     });
   </script>
 </body>
