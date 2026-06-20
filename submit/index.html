@@ -31,6 +31,11 @@
       margin-bottom: 8px;
     }
 
+    h2 {
+      margin-top: 0;
+      color: #ffffff;
+    }
+
     p {
       color: #ddd;
       line-height: 1.4;
@@ -54,6 +59,7 @@
 
     textarea {
       min-height: 90px;
+      resize: vertical;
     }
 
     button {
@@ -67,6 +73,11 @@
       font-size: 17px;
       font-weight: bold;
       cursor: pointer;
+    }
+
+    button:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
     }
 
     .secondary {
@@ -100,7 +111,26 @@
       border-radius: 12px;
       margin-top: 12px;
       color: #eee;
-      line-height: 1.5;
+      line-height: 1.6;
+      word-break: break-word;
+    }
+
+    .error-box {
+      display: none;
+      background: #3a1111;
+      color: #ffdede;
+      border: 1px solid #8a2c2c;
+      padding: 12px;
+      border-radius: 12px;
+      margin-top: 16px;
+      line-height: 1.4;
+      word-break: break-word;
+    }
+
+    .small-note {
+      font-size: 13px;
+      color: #aaa;
+      margin-top: 8px;
     }
   </style>
 </head>
@@ -116,7 +146,7 @@
         <div class="step active">
           <div class="progress">Step 1 of 5</div>
 
-          <label>What are you adding?</label>
+          <label for="submissionType">What are you adding?</label>
           <select id="submissionType" required>
             <option value="">Choose one</option>
             <option value="Business">Business</option>
@@ -130,13 +160,13 @@
         <div class="step">
           <div class="progress">Step 2 of 5</div>
 
-          <label>Name</label>
+          <label for="name">Name</label>
           <input id="name" type="text" placeholder="Business or resource name" required />
 
-          <label>Category</label>
+          <label for="category">Category</label>
           <input id="category" type="text" placeholder="Food, health, legal, education, etc." required />
 
-          <label>Short Description</label>
+          <label for="description">Short Description</label>
           <textarea id="description" placeholder="Briefly describe what they offer"></textarea>
 
           <button type="button" onclick="nextStep()">Next</button>
@@ -147,16 +177,16 @@
         <div class="step">
           <div class="progress">Step 3 of 5</div>
 
-          <label>Phone</label>
+          <label for="phone">Phone</label>
           <input id="phone" type="tel" placeholder="Phone number" />
 
-          <label>Email</label>
+          <label for="email">Email</label>
           <input id="email" type="email" placeholder="Email address" />
 
-          <label>Website</label>
+          <label for="website">Website</label>
           <input id="website" type="url" placeholder="https://example.com" />
 
-          <label>Instagram</label>
+          <label for="instagram">Instagram</label>
           <input id="instagram" type="text" placeholder="@username" />
 
           <button type="button" onclick="nextStep()">Next</button>
@@ -167,16 +197,16 @@
         <div class="step">
           <div class="progress">Step 4 of 5</div>
 
-          <label>Address</label>
+          <label for="address">Address</label>
           <input id="address" type="text" placeholder="Street address" />
 
-          <label>City</label>
+          <label for="city">City</label>
           <input id="city" type="text" placeholder="City" />
 
-          <label>State</label>
+          <label for="state">State</label>
           <input id="state" type="text" placeholder="State" />
 
-          <label>ZIP</label>
+          <label for="zip">ZIP</label>
           <input id="zip" type="text" placeholder="ZIP code" />
 
           <button type="button" onclick="showReview()">Review</button>
@@ -190,10 +220,12 @@
           <h2>Review Submission</h2>
           <div id="reviewBox" class="review-box"></div>
 
-          <button type="submit">Submit to LinkFam</button>
+          <button id="submitButton" type="submit">Submit to LinkFam</button>
           <button class="secondary" type="button" onclick="prevStep()">Back</button>
         </div>
       </form>
+
+      <div id="errorBox" class="error-box"></div>
     </div>
 
     <div class="card success" id="successMessage">
@@ -204,37 +236,49 @@
   </div>
 
   <script>
-    // TODO: Replace these with your Back4App values.
+    /*
+      Back4App settings.
+      Paste your own values below.
+      Never use the Master Key here.
+    */
     const PARSE_SERVER_URL = "https://parseapi.back4app.com";
-    const PARSE_APP_ID = "2AxqUa732w8sQviO38zmLdWlT1oQaJpKbq2NdwsR";
-    const PARSE_REST_API_KEY = "jegdXfbfeyGjxXsmSaqXJm19c1UZL1pxWXwO5iv";
+    const PARSE_APP_ID = "PASTE_YOUR_APPLICATION_ID_HERE";
+    const PARSE_REST_API_KEY = "PASTE_YOUR_PARSE_REST_KEY_HERE";
 
     let currentStep = 0;
     const steps = document.querySelectorAll(".step");
+    const errorBox = document.getElementById("errorBox");
+    const submitButton = document.getElementById("submitButton");
 
     function showStep(index) {
+      if (index < 0 || index >= steps.length) return;
+
+      currentStep = index;
+
       steps.forEach((step, i) => {
-        step.classList.toggle("active", i === index);
+        step.classList.toggle("active", i === currentStep);
       });
+
+      hideError();
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
 
     function nextStep() {
       if (!validateCurrentStep()) return;
-      currentStep++;
-      showStep(currentStep);
+      showStep(currentStep + 1);
     }
 
     function prevStep() {
-      currentStep--;
-      showStep(currentStep);
+      showStep(currentStep - 1);
     }
 
     function validateCurrentStep() {
       const inputs = steps[currentStep].querySelectorAll("input, textarea, select");
 
-      for (let input of inputs) {
+      for (const input of inputs) {
         if (input.hasAttribute("required") && !input.value.trim()) {
-          alert("Please fill out the required fields.");
+          showError("Please fill out the required fields before continuing.");
+          input.focus();
           return false;
         }
       }
@@ -242,22 +286,36 @@
       return true;
     }
 
+    function getValue(id) {
+      return document.getElementById(id).value.trim();
+    }
+
     function getFormData() {
       return {
-        submissionType: document.getElementById("submissionType").value,
-        name: document.getElementById("name").value.trim(),
-        category: document.getElementById("category").value.trim(),
-        description: document.getElementById("description").value.trim(),
-        phone: document.getElementById("phone").value.trim(),
-        email: document.getElementById("email").value.trim(),
-        website: document.getElementById("website").value.trim(),
-        instagram: document.getElementById("instagram").value.trim(),
-        address: document.getElementById("address").value.trim(),
-        city: document.getElementById("city").value.trim(),
-        state: document.getElementById("state").value.trim(),
-        zip: document.getElementById("zip").value.trim(),
-        status: "pending"
+        submissionType: getValue("submissionType"),
+        name: getValue("name"),
+        category: getValue("category"),
+        description: getValue("description"),
+        phone: getValue("phone"),
+        email: getValue("email"),
+        website: getValue("website"),
+        instagram: getValue("instagram"),
+        address: getValue("address"),
+        city: getValue("city"),
+        state: getValue("state"),
+        zip: getValue("zip"),
+        status: "pending",
+        source: "web_submit_form"
       };
+    }
+
+    function escapeHTML(value) {
+      return String(value || "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
     }
 
     function showReview() {
@@ -266,54 +324,91 @@
       const data = getFormData();
 
       document.getElementById("reviewBox").innerHTML = `
-        <strong>Type:</strong> ${data.submissionType}<br>
-        <strong>Name:</strong> ${data.name}<br>
-        <strong>Category:</strong> ${data.category}<br>
-        <strong>Description:</strong> ${data.description}<br>
-        <strong>Phone:</strong> ${data.phone}<br>
-        <strong>Email:</strong> ${data.email}<br>
-        <strong>Website:</strong> ${data.website}<br>
-        <strong>Instagram:</strong> ${data.instagram}<br>
-        <strong>Address:</strong> ${data.address}<br>
-        <strong>City:</strong> ${data.city}<br>
-        <strong>State:</strong> ${data.state}<br>
-        <strong>ZIP:</strong> ${data.zip}
+        <strong>Type:</strong> ${escapeHTML(data.submissionType)}<br>
+        <strong>Name:</strong> ${escapeHTML(data.name)}<br>
+        <strong>Category:</strong> ${escapeHTML(data.category)}<br>
+        <strong>Description:</strong> ${escapeHTML(data.description)}<br>
+        <strong>Phone:</strong> ${escapeHTML(data.phone)}<br>
+        <strong>Email:</strong> ${escapeHTML(data.email)}<br>
+        <strong>Website:</strong> ${escapeHTML(data.website)}<br>
+        <strong>Instagram:</strong> ${escapeHTML(data.instagram)}<br>
+        <strong>Address:</strong> ${escapeHTML(data.address)}<br>
+        <strong>City:</strong> ${escapeHTML(data.city)}<br>
+        <strong>State:</strong> ${escapeHTML(data.state)}<br>
+        <strong>ZIP:</strong> ${escapeHTML(data.zip)}
       `;
 
-      currentStep++;
-      showStep(currentStep);
+      showStep(4);
     }
 
-    document.getElementById("linkfamForm").addEventListener("submit", async function(event) {
-      event.preventDefault();
+    function showError(message) {
+      errorBox.style.display = "block";
+      errorBox.textContent = message;
+    }
 
-      const data = getFormData();
+    function hideError() {
+      errorBox.style.display = "none";
+      errorBox.textContent = "";
+    }
 
+    async function submitToBack4App(data) {
       const className = data.submissionType === "Business"
         ? "BusinessSubmissions"
         : "CommunitySubmissions";
 
-      try {
-        const response = await fetch(`${PARSE_SERVER_URL}/classes/${className}`, {
-          method: "POST",
-          headers: {
-            "X-Parse-Application-Id": PARSE_APP_ID,
-            "X-Parse-REST-API-Key": PARSE_REST_API_KEY,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify(data)
-        });
+      const url = `${PARSE_SERVER_URL}/classes/${className}`;
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(errorText);
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "X-Parse-Application-Id": PARSE_APP_ID,
+          "X-Parse-REST-API-Key": PARSE_REST_API_KEY,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(data)
+      });
+
+      const responseText = await response.text();
+
+      if (!response.ok) {
+        throw new Error(responseText || `Request failed with status ${response.status}`);
       }
+
+      try {
+        return JSON.parse(responseText);
+      } catch {
+        return responseText;
+      }
+    }
+
+    document.getElementById("linkfamForm").addEventListener("submit", async function(event) {
+      event.preventDefault();
+      hideError();
+
+      const data = getFormData();
+
+      if (!data.submissionType || !data.name || !data.category) {
+        showError("Please make sure type, name, and category are filled out.");
+        return;
+      }
+
+      try {
+        submitButton.disabled = true;
+        submitButton.textContent = "Submitting...";
+
+        await submitToBack4App(data);
 
         document.getElementById("formCard").style.display = "none";
         document.getElementById("successMessage").style.display = "block";
 
-      } alert("Something went wrong: " + error.message);
-    console.error(error);
+      } catch (error) {
+        console.error("Full submission error:", error);
+        showError("Something went wrong: " + error.message);
+
+      } finally {
+        submitButton.disabled = false;
+        submitButton.textContent = "Submit to LinkFam";
+      }
     });
   </script>
 </body>
