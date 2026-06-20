@@ -1,1 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Add to LinkFam</title>
 
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #0f0f0f;
+      color: white;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 520px;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: #1a1a1a;
+      border-radius: 18px;
+      padding: 22px;
+      border: 1px solid #333;
+    }
+
+    h1 {
+      color: #d8a85d;
+      margin-bottom: 8px;
+    }
+
+    p {
+      color: #ddd;
+      line-height: 1.4;
+    }
+
+    label {
+      display: block;
+      margin-top: 14px;
+      font-weight: bold;
+    }
+
+    input, textarea, select {
+      width: 100%;
+      padding: 13px;
+      margin-top: 6px;
+      border-radius: 10px;
+      border: none;
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+
+    textarea {
+      min-height: 90px;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      margin-top: 20px;
+      border: none;
+      border-radius: 12px;
+      background: #d8a85d;
+      color: #111;
+      font-size: 17px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .secondary {
+      background: transparent;
+      color: #d8a85d;
+      border: 1px solid #d8a85d;
+    }
+
+    .step {
+      display: none;
+    }
+
+    .step.active {
+      display: block;
+    }
+
+    .progress {
+      color: #d8a85d;
+      margin-bottom: 12px;
+      font-size: 14px;
+    }
+
+    .success {
+      display: none;
+      text-align: center;
+    }
+
+    .review-box {
+      background: #111;
+      padding: 14px;
+      border-radius: 12px;
+      margin-top: 12px;
+      color: #eee;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="card" id="formCard">
+      <h1>Add to LinkFam</h1>
+      <p>Submit a business or community resource to be reviewed before it appears in the app.</p>
+
+      <form id="linkfamForm">
+        <!-- Step 1 -->
+        <div class="step active">
+          <div class="progress">Step 1 of 5</div>
+
+          <label>What are you adding?</label>
+          <select id="submissionType" required>
+            <option value="">Choose one</option>
+            <option value="Business">Business</option>
+            <option value="Community Resource">Community Resource</option>
+          </select>
+
+          <button type="button" onclick="nextStep()">Next</button>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="step">
+          <div class="progress">Step 2 of 5</div>
+
+          <label>Name</label>
+          <input id="name" type="text" placeholder="Business or resource name" required />
+
+          <label>Category</label>
+          <input id="category" type="text" placeholder="Food, health, legal, education, etc." required />
+
+          <label>Short Description</label>
+          <textarea id="description" placeholder="Briefly describe what they offer"></textarea>
+
+          <button type="button" onclick="nextStep()">Next</button>
+          <button class="secondary" type="button" onclick="prevStep()">Back</button>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="step">
+          <div class="progress">Step 3 of 5</div>
+
+          <label>Phone</label>
+          <input id="phone" type="tel" placeholder="Phone number" />
+
+          <label>Email</label>
+          <input id="email" type="email" placeholder="Email address" />
+
+          <label>Website</label>
+          <input id="website" type="url" placeholder="https://example.com" />
+
+          <label>Instagram</label>
+          <input id="instagram" type="text" placeholder="@username" />
+
+          <button type="button" onclick="nextStep()">Next</button>
+          <button class="secondary" type="button" onclick="prevStep()">Back</button>
+        </div>
+
+        <!-- Step 4 -->
+        <div class="step">
+          <div class="progress">Step 4 of 5</div>
+
+          <label>Address</label>
+          <input id="address" type="text" placeholder="Street address" />
+
+          <label>City</label>
+          <input id="city" type="text" placeholder="City" />
+
+          <label>State</label>
+          <input id="state" type="text" placeholder="State" />
+
+          <label>ZIP</label>
+          <input id="zip" type="text" placeholder="ZIP code" />
+
+          <button type="button" onclick="showReview()">Review</button>
+          <button class="secondary" type="button" onclick="prevStep()">Back</button>
+        </div>
+
+        <!-- Step 5 -->
+        <div class="step">
+          <div class="progress">Step 5 of 5</div>
+
+          <h2>Review Submission</h2>
+          <div id="reviewBox" class="review-box"></div>
+
+          <button type="submit">Submit to LinkFam</button>
+          <button class="secondary" type="button" onclick="prevStep()">Back</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="card success" id="successMessage">
+      <h1>Submission Received</h1>
+      <p>Thanks for helping add another link to the fam. Your submission will be reviewed before it appears in LinkFam.</p>
+      <button onclick="window.location.href='/'">Download LinkFam</button>
+    </div>
+  </div>
+
+  <script>
+    // TODO: Replace these with your Back4App values.
+    const PARSE_SERVER_URL = "https://YOUR_PARSE_SERVER_URL/parse";
+    const PARSE_APP_ID = "YOUR_PARSE_APP_ID";
+    const PARSE_REST_API_KEY = "YOUR_REST_API_KEY";
+
+    let currentStep = 0;
+    const steps = document.querySelectorAll(".step");
+
+    function showStep(index) {
+      steps.forEach((step, i) => {
+        step.classList.toggle("active", i === index);
+      });
+    }
+
+    function nextStep() {
+      if (!validateCurrentStep()) return;
+      currentStep++;
+      showStep(currentStep);
+    }
+
+    function prevStep() {
+      currentStep--;
+      showStep(currentStep);
+    }
+
+    function validateCurrentStep() {
+      const inputs = steps[currentStep].querySelectorAll("input, textarea, select");
+
+      for (let input of inputs) {
+        if (input.hasAttribute("required") && !input.value.trim()) {
+          alert("Please fill out the required fields.");
+          return false;
+        }
+      }
+
+      return true;
+    }
+
+    function getFormData() {
+      return {
+        submissionType: document.getElementById("submissionType").value,
+        name: document.getElementById("name").value.trim(),
+        category: document.getElementById("category").value.trim(),
+        description: document.getElementById("description").value.trim(),
+        phone: document.getElementById("phone").value.trim(),
+        email: document.getElementById("email").value.trim(),
+        website: document.getElementById("website").value.trim(),
+        instagram: document.getElementById("instagram").value.trim(),
+        address: document.getElementById("address").value.trim(),
+        city: document.getElementById("city").value.trim(),
+        state: document.getElementById("state").value.trim(),
+        zip: document.getElementById("zip").value.trim(),
+        status: "pending"
+      };
+    }
+
+    function showReview() {
+      if (!validateCurrentStep()) return;
+
+      const data = getFormData();
+
+      document.getElementById("reviewBox").innerHTML = `
+        <strong>Type:</strong> ${data.submissionType}<br>
+        <strong>Name:</strong> ${data.name}<br>
+        <strong>Category:</strong> ${data.category}<br>
+        <strong>Description:</strong> ${data.description}<br>
+        <strong>Phone:</strong> ${data.phone}<br>
+        <strong>Email:</strong> ${data.email}<br>
+        <strong>Website:</strong> ${data.website}<br>
+        <strong>Instagram:</strong> ${data.instagram}<br>
+        <strong>Address:</strong> ${data.address}<br>
+        <strong>City:</strong> ${data.city}<br>
+        <strong>State:</strong> ${data.state}<br>
+        <strong>ZIP:</strong> ${data.zip}
+      `;
+
+      currentStep++;
+      showStep(currentStep);
+    }
+
+    document.getElementById("linkfamForm").addEventListener("submit", async function(event) {
+      event.preventDefault();
+
+      const data = getFormData();
+
+      const className = data.submissionType === "Business"
+        ? "BusinessSubmissions"
+        : "CommunitySubmissions";
+
+      try {
+        const response = await fetch(`${PARSE_SERVER_URL}/classes/${className}`, {
+          method: "POST",
+          headers: {
+            "X-Parse-Application-Id": PARSE_APP_ID,
+            "X-Parse-REST-API-Key": PARSE_REST_API_KEY,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(data)
+        });
+
+        if (!response.ok) {
+          throw new Error("Submission failed");
+        }
+
+        document.getElementById("formCard").style.display = "none";
+        document.getElementById("successMessage").style.display = "block";
+
+      } catch (error) {
+        alert("Something went wrong. Please try again.");
+        console.error(error);
+      }
+    });
+  </script>
+</body>
+</html>
