@@ -1,3 +1,15 @@
+Here’s a fully refactored `index.html` you can copy and paste.
+
+Replace the two values near the top of the script:
+
+```js
+const PARSE_APP_ID = "PASTE_YOUR_APP_ID_HERE";
+const PARSE_REST_API_KEY = "PASTE_YOUR_REST_API_KEY_HERE";
+```
+
+with your Back4App values. Never use the Master Key in this file.
+
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -12,37 +24,40 @@
 
     body {
       margin: 0;
+      min-height: 100vh;
       font-family: Arial, sans-serif;
       background: #0f0f0f;
-      color: white;
+      color: #ffffff;
       padding: 20px;
     }
 
     .container {
-      max-width: 520px;
+      width: 100%;
+      max-width: 540px;
       margin: 0 auto;
     }
 
     .card {
       background: #1a1a1a;
+      border: 1px solid #333333;
       border-radius: 18px;
       padding: 22px;
-      border: 1px solid #333;
     }
 
     h1 {
+      margin: 0 0 8px;
       color: #d8a85d;
-      margin-bottom: 8px;
+      font-size: 30px;
     }
 
     h2 {
-      margin-top: 0;
-      color: #ffffff;
+      margin: 0 0 14px;
+      font-size: 22px;
     }
 
     p {
-      color: #ddd;
-      line-height: 1.4;
+      color: #dddddd;
+      line-height: 1.45;
     }
 
     label {
@@ -55,10 +70,12 @@
     textarea,
     select {
       width: 100%;
-      padding: 13px;
       margin-top: 6px;
+      padding: 13px;
+      border: 1px solid #444444;
       border-radius: 10px;
-      border: none;
+      background: #ffffff;
+      color: #111111;
       font-size: 16px;
     }
 
@@ -69,12 +86,12 @@
 
     button {
       width: 100%;
+      margin-top: 18px;
       padding: 14px;
-      margin-top: 20px;
       border: none;
       border-radius: 12px;
       background: #d8a85d;
-      color: #111;
+      color: #111111;
       font-size: 17px;
       font-weight: bold;
       cursor: pointer;
@@ -105,19 +122,19 @@
       font-size: 14px;
     }
 
-    .success {
-      display: none;
-      text-align: center;
+    .review-box,
+    .debug-box,
+    .error-box {
+      margin-top: 16px;
+      padding: 14px;
+      border-radius: 12px;
+      line-height: 1.55;
+      word-break: break-word;
     }
 
     .review-box {
-      background: #111;
-      padding: 14px;
-      border-radius: 12px;
-      margin-top: 12px;
-      color: #eee;
-      line-height: 1.6;
-      word-break: break-word;
+      background: #111111;
+      color: #eeeeee;
     }
 
     .error-box {
@@ -125,173 +142,184 @@
       background: #3a1111;
       color: #ffdede;
       border: 1px solid #8a2c2c;
-      padding: 12px;
-      border-radius: 12px;
-      margin-top: 16px;
-      line-height: 1.4;
-      word-break: break-word;
     }
 
     .debug-box {
       display: none;
-      background: #111;
-      color: #aaa;
-      border: 1px solid #333;
-      padding: 10px;
-      border-radius: 10px;
-      margin-top: 12px;
+      background: #111111;
+      color: #aaaaaa;
+      border: 1px solid #333333;
       font-size: 12px;
-      word-break: break-word;
+    }
+
+    .success {
+      display: none;
+      text-align: center;
+    }
+
+    .muted {
+      color: #bbbbbb;
+      font-size: 14px;
     }
   </style>
 </head>
 
 <body>
-  <div class="container">
-    <div class="card" id="formCard">
+  <main class="container">
+    <section class="card" id="formCard">
       <h1>Add to LinkFam</h1>
       <p>Submit a business or community resource to be reviewed before it appears in the app.</p>
 
-      <div id="step1" class="step active">
-        <div class="progress">Step 1 of 5</div>
+      <form id="submissionForm">
+        <div class="step active" data-step="0">
+          <div class="progress">Step 1 of 5</div>
 
-        <label for="submissionType">What are you adding?</label>
-        <select id="submissionType">
-          <option value="">Choose one</option>
-          <option value="Business">Business</option>
-          <option value="Community Resource">Community Resource</option>
-        </select>
+          <label for="submissionType">What are you adding?</label>
+          <select id="submissionType" name="submissionType" required>
+            <option value="">Choose one</option>
+            <option value="Business">Business</option>
+            <option value="Community Resource">Community Resource</option>
+          </select>
 
-        <button type="button" onclick="nextStep()">Next</button>
-      </div>
+          <button type="button" data-next>Next</button>
+        </div>
 
-      <div id="step2" class="step">
-        <div class="progress">Step 2 of 5</div>
+        <div class="step" data-step="1">
+          <div class="progress">Step 2 of 5</div>
 
-        <label for="name">Name</label>
-        <input id="name" type="text" placeholder="Business or resource name" />
+          <label for="name">Name</label>
+          <input id="name" name="name" type="text" placeholder="Business or resource name" required />
 
-        <label for="category">Category</label>
-        <input id="category" type="text" placeholder="Food, health, legal, education, etc." />
+          <label for="category">Category</label>
+          <input id="category" name="category" type="text" placeholder="Food, health, legal, education, etc." required />
 
-        <label for="description">Short Description</label>
-        <textarea id="description" placeholder="Briefly describe what they offer"></textarea>
+          <label for="description">Short Description</label>
+          <textarea id="description" name="description" placeholder="Briefly describe what they offer"></textarea>
 
-        <button type="button" onclick="nextStep()">Next</button>
-        <button class="secondary" type="button" onclick="prevStep()">Back</button>
-      </div>
+          <button type="button" data-next>Next</button>
+          <button class="secondary" type="button" data-back>Back</button>
+        </div>
 
-      <div id="step3" class="step">
-        <div class="progress">Step 3 of 5</div>
+        <div class="step" data-step="2">
+          <div class="progress">Step 3 of 5</div>
 
-        <label for="phone">Phone</label>
-        <input id="phone" type="tel" placeholder="Phone number" />
+          <label for="phone">Phone</label>
+          <input id="phone" name="phone" type="tel" placeholder="Phone number" />
 
-        <label for="email">Email</label>
-        <input id="email" type="email" placeholder="Email address" />
+          <label for="email">Email</label>
+          <input id="email" name="email" type="email" placeholder="Email address" />
 
-        <label for="website">Website</label>
-        <input id="website" type="url" placeholder="https://example.com" />
+          <label for="website">Website</label>
+          <input id="website" name="website" type="url" placeholder="https://example.com" />
 
-        <label for="instagram">Instagram</label>
-        <input id="instagram" type="text" placeholder="@username" />
+          <label for="instagram">Instagram</label>
+          <input id="instagram" name="instagram" type="text" placeholder="@username" />
 
-        <button type="button" onclick="nextStep()">Next</button>
-        <button class="secondary" type="button" onclick="prevStep()">Back</button>
-      </div>
+          <button type="button" data-next>Next</button>
+          <button class="secondary" type="button" data-back>Back</button>
+        </div>
 
-      <div id="step4" class="step">
-        <div class="progress">Step 4 of 5</div>
+        <div class="step" data-step="3">
+          <div class="progress">Step 4 of 5</div>
 
-        <label for="address">Address</label>
-        <input id="address" type="text" placeholder="Street address" />
+          <label for="address">Address</label>
+          <input id="address" name="address" type="text" placeholder="Street address" />
 
-        <label for="city">City</label>
-        <input id="city" type="text" placeholder="City" />
+          <label for="city">City</label>
+          <input id="city" name="city" type="text" placeholder="City" />
 
-        <label for="state">State</label>
-        <input id="state" type="text" placeholder="State" />
+          <label for="state">State</label>
+          <input id="state" name="state" type="text" placeholder="State" />
 
-        <label for="zip">ZIP</label>
-        <input id="zip" type="text" placeholder="ZIP code" />
+          <label for="zip">ZIP</label>
+          <input id="zip" name="zip" type="text" placeholder="ZIP code" />
 
-        <button type="button" onclick="showReview()">Review</button>
-        <button class="secondary" type="button" onclick="prevStep()">Back</button>
-      </div>
+          <button type="button" id="reviewButton">Review</button>
+          <button class="secondary" type="button" data-back>Back</button>
+        </div>
 
-      <div id="step5" class="step">
-        <div class="progress">Step 5 of 5</div>
+        <div class="step" data-step="4">
+          <div class="progress">Step 5 of 5</div>
 
-        <h2>Review Submission</h2>
-        <div id="reviewBox" class="review-box"></div>
+          <h2>Review Submission</h2>
+          <div id="reviewBox" class="review-box"></div>
 
-        <button id="submitButton" type="button" onclick="handleSubmit()">Submit to LinkFam</button>
-        <button class="secondary" type="button" onclick="prevStep()">Back</button>
-      </div>
+          <button id="submitButton" type="submit">Submit to LinkFam</button>
+          <button class="secondary" type="button" data-back>Back</button>
+        </div>
+      </form>
 
       <div id="errorBox" class="error-box"></div>
       <div id="debugBox" class="debug-box"></div>
-    </div>
+    </section>
 
-    <div class="card success" id="successMessage">
+    <section class="card success" id="successMessage">
       <h1>Submission Received</h1>
       <p>Thanks for helping add another link to the fam. Your submission will be reviewed before it appears in LinkFam.</p>
       <button type="button" onclick="window.location.href='/'">Download LinkFam</button>
-    </div>
-  </div>
+    </section>
+  </main>
 
   <script>
-    /*
-      Back4App settings.
-      Use your Application ID and Parse REST Key.
-      Never use the Master Key here.
-    */
     const PARSE_SERVER_URL = "https://parseapi.back4app.com";
-    const PARSE_APP_ID = "2AxqUa732w8sQviO38zmLdWlT1oQaJpKbq2NdwsR";
-    const PARSE_REST_API_KEY = "jjegdXfbfeyGjxXsmSaqXJm19c1UZL1pxWXwO5iv";
+    const PARSE_APP_ID = "PASTE_YOUR_APP_ID_HERE";
+    const PARSE_REST_API_KEY = "PASTE_YOUR_REST_API_KEY_HERE";
 
-    let currentStep = 0;
-
-    const steps = [
-      document.getElementById("step1"),
-      document.getElementById("step2"),
-      document.getElementById("step3"),
-      document.getElementById("step4"),
-      document.getElementById("step5")
-    ];
-
+    const steps = Array.from(document.querySelectorAll(".step"));
+    const form = document.getElementById("submissionForm");
+    const formCard = document.getElementById("formCard");
+    const successMessage = document.getElementById("successMessage");
+    const reviewBox = document.getElementById("reviewBox");
     const errorBox = document.getElementById("errorBox");
     const debugBox = document.getElementById("debugBox");
     const submitButton = document.getElementById("submitButton");
+
+    let currentStep = 0;
+
+    function getField(id) {
+      return document.getElementById(id);
+    }
+
+    function getValue(id) {
+      const field = getField(id);
+      return field ? field.value.trim() : "";
+    }
 
     function showStep(index) {
       if (index < 0 || index >= steps.length) return;
 
       currentStep = index;
 
-      steps.forEach(function(step, i) {
-        step.classList.toggle("active", i === currentStep);
+      steps.forEach(function(step, stepIndex) {
+        step.classList.toggle("active", stepIndex === currentStep);
       });
 
       hideError();
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
 
-    function nextStep() {
-      if (!validateCurrentStep()) return;
-      showStep(currentStep + 1);
+    function showError(message) {
+      errorBox.textContent = message;
+      errorBox.style.display = "block";
+      window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
     }
 
-    function prevStep() {
-      showStep(currentStep - 1);
+    function hideError() {
+      errorBox.textContent = "";
+      errorBox.style.display = "none";
     }
 
-    function getValue(id) {
-      const element = document.getElementById(id);
-      return element ? element.value.trim() : "";
+    function showDebug(message) {
+      debugBox.textContent = message;
+      debugBox.style.display = "block";
     }
 
-    function validateCurrentStep() {
+    function clearDebug() {
+      debugBox.textContent = "";
+      debugBox.style.display = "none";
+    }
+
+    function validateStep() {
       hideError();
 
       if (currentStep === 0 && !getValue("submissionType")) {
@@ -342,51 +370,38 @@
         .replaceAll("'", "&#039;");
     }
 
-    function showReview() {
-      if (!validateCurrentStep()) return;
+    function renderReview() {
+      if (!validateStep()) return;
 
       const data = getFormData();
 
-      document.getElementById("reviewBox").innerHTML = `
+      reviewBox.innerHTML = `
         <strong>Type:</strong> ${escapeHTML(data.submissionType)}<br>
         <strong>Name:</strong> ${escapeHTML(data.name)}<br>
         <strong>Category:</strong> ${escapeHTML(data.category)}<br>
-        <strong>Description:</strong> ${escapeHTML(data.description)}<br>
-        <strong>Phone:</strong> ${escapeHTML(data.phone)}<br>
-        <strong>Email:</strong> ${escapeHTML(data.email)}<br>
-        <strong>Website:</strong> ${escapeHTML(data.website)}<br>
-        <strong>Instagram:</strong> ${escapeHTML(data.instagram)}<br>
-        <strong>Address:</strong> ${escapeHTML(data.address)}<br>
-        <strong>City:</strong> ${escapeHTML(data.city)}<br>
-        <strong>State:</strong> ${escapeHTML(data.state)}<br>
-        <strong>ZIP:</strong> ${escapeHTML(data.zip)}
+        <strong>Description:</strong> ${escapeHTML(data.description || "Not provided")}<br>
+        <strong>Phone:</strong> ${escapeHTML(data.phone || "Not provided")}<br>
+        <strong>Email:</strong> ${escapeHTML(data.email || "Not provided")}<br>
+        <strong>Website:</strong> ${escapeHTML(data.website || "Not provided")}<br>
+        <strong>Instagram:</strong> ${escapeHTML(data.instagram || "Not provided")}<br>
+        <strong>Address:</strong> ${escapeHTML(data.address || "Not provided")}<br>
+        <strong>City:</strong> ${escapeHTML(data.city || "Not provided")}<br>
+        <strong>State:</strong> ${escapeHTML(data.state || "Not provided")}<br>
+        <strong>ZIP:</strong> ${escapeHTML(data.zip || "Not provided")}
       `;
 
       showStep(4);
     }
 
-    function showError(message) {
-      errorBox.style.display = "block";
-      errorBox.textContent = message;
-      window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
-    }
-
-    function hideError() {
-      errorBox.style.display = "none";
-      errorBox.textContent = "";
-    }
-
-    function showDebug(message) {
-      debugBox.style.display = "block";
-      debugBox.textContent = message;
-    }
-
-    function clearDebug() {
-      debugBox.style.display = "none";
-      debugBox.textContent = "";
-    }
-
     async function submitToBack4App(data) {
+      if (!PARSE_APP_ID || PARSE_APP_ID.includes("PASTE_")) {
+        throw new Error("Missing Back4App Application ID.");
+      }
+
+      if (!PARSE_REST_API_KEY || PARSE_REST_API_KEY.includes("PASTE_")) {
+        throw new Error("Missing Back4App REST API Key.");
+      }
+
       const className = data.submissionType === "Business"
         ? "BusinessSubmissions"
         : "CommunitySubmissions";
@@ -411,18 +426,12 @@
         throw new Error(responseText || `Request failed with status ${response.status}`);
       }
 
-      if (!responseText) {
-        return {};
-      }
-
-      try {
-        return JSON.parse(responseText);
-      } catch (error) {
-        return { rawResponse: responseText };
-      }
+      return responseText ? JSON.parse(responseText) : {};
     }
 
-    async function handleSubmit() {
+    async function handleSubmit(event) {
+      event.preventDefault();
+
       hideError();
       clearDebug();
 
@@ -438,28 +447,41 @@
         return;
       }
 
-      
-      
-
       try {
         submitButton.disabled = true;
         submitButton.textContent = "Submitting...";
 
         await submitToBack4App(data);
 
-        document.getElementById("formCard").style.display = "none";
-        document.getElementById("successMessage").style.display = "block";
+        formCard.style.display = "none";
+        successMessage.style.display = "block";
         window.scrollTo({ top: 0, behavior: "smooth" });
-
       } catch (error) {
         console.error("Full submission error:", error);
         showError("Something went wrong: " + error.message);
-
       } finally {
         submitButton.disabled = false;
         submitButton.textContent = "Submit to LinkFam";
       }
     }
+
+    document.querySelectorAll("[data-next]").forEach(function(button) {
+      button.addEventListener("click", function() {
+        if (validateStep()) {
+          showStep(currentStep + 1);
+        }
+      });
+    });
+
+    document.querySelectorAll("[data-back]").forEach(function(button) {
+      button.addEventListener("click", function() {
+        showStep(currentStep - 1);
+      });
+    });
+
+    document.getElementById("reviewButton").addEventListener("click", renderReview);
+    form.addEventListener("submit", handleSubmit);
   </script>
 </body>
 </html>
+```
