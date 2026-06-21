@@ -4,10 +4,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
   <title>Add to LinkFam</title>
 
   <style>
-    * { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+    }
 
     body {
       margin: 0;
@@ -110,8 +113,7 @@
     }
 
     .review-box,
-    .message-box,
-    .debug-log {
+    .message-box {
       margin-top: 16px;
       padding: 14px;
       border-radius: 12px;
@@ -151,15 +153,6 @@
       color: #ffdede;
     }
 
-    .debug-log {
-      display: block;
-      background: #111111;
-      border: 1px solid #333333;
-      color: #bbbbbb;
-      font-size: 12px;
-      white-space: pre-wrap;
-    }
-
     .success-screen {
       display: none;
       text-align: center;
@@ -172,15 +165,13 @@
   </style>
 </head>
 
-<body onload="pageReady()">
+<body>
   <main class="container">
     <section class="card" id="formCard">
       <h1>Add to LinkFam</h1>
       <p>Submit a business or community resource to be reviewed before it appears in the app.</p>
 
-      <button type="button" class="secondary" onclick="testPageScript()">Test Page Script</button>
-
-      <form id="submissionForm" novalidate onsubmit="submitForm(event); return false;">
+      <form id="submissionForm" novalidate>
         <div id="step1" class="step active">
           <div class="progress">Step 1 of 5</div>
 
@@ -197,11 +188,18 @@
         <div id="step2" class="step">
           <div class="progress">Step 2 of 5</div>
 
-          <label for="name">Name</label>
+          <label id="nameLabel" for="name">Name</label>
           <input id="name" type="text" placeholder="Business or resource name" />
 
-          <label for="category">Category</label>
-          <input id="category" type="text" placeholder="Food, health, legal, education, etc." />
+          <label id="categoryLabel" for="category">Category</label>
+          <select id="category">
+            <option value="">Choose a category</option>
+          </select>
+
+          <div id="organizationGroup" style="display: none;">
+            <label for="organizationName">Organization name, if applicable</label>
+            <input id="organizationName" type="text" placeholder="Organization name" />
+          </div>
 
           <label for="description">Short Description</label>
           <textarea id="description" placeholder="Briefly describe what they offer"></textarea>
@@ -233,7 +231,7 @@
           <div class="progress">Step 4 of 5</div>
 
           <label for="address">Address</label>
-          <input id="address" type="text" placeholder="Street address" />
+          <input id="address" type="text" placeholder="Street address or service area" />
 
           <label for="city">City</label>
           <input id="city" type="text" placeholder="City" />
@@ -243,12 +241,6 @@
 
           <label for="zip">ZIP</label>
           <input id="zip" type="text" placeholder="ZIP code" />
-
-          <label for="latitude">Latitude Optional</label>
-          <input id="latitude" type="number" step="any" placeholder="Leave blank if unknown" />
-
-          <label for="longitude">Longitude Optional</label>
-          <input id="longitude" type="number" step="any" placeholder="Leave blank if unknown" />
 
           <button type="button" onclick="showReview()">Review</button>
           <button class="secondary" type="button" onclick="prevStep()">Back</button>
@@ -260,13 +252,12 @@
           <h2>Review Submission</h2>
           <div id="reviewBox" class="review-box"></div>
 
-          <button id="submitButton" type="button" onclick="submitForm(event)">Submit to LinkFam</button>
+          <button id="submitButton" type="button" onclick="submitForm()">Submit to LinkFam</button>
           <button class="secondary" type="button" onclick="prevStep()">Back</button>
         </div>
       </form>
 
       <div id="statusBox" class="message-box"></div>
-      <pre id="debugLog" class="debug-log">Debug log will appear here.</pre>
     </section>
 
     <section class="card success-screen" id="successMessage">
@@ -284,69 +275,39 @@
 
     var currentStep = 1;
 
-    window.onerror = function(message, source, line) {
-      showStatus("error", "JavaScript error: " + message + " on line " + line);
-      logMessage("JavaScript error: " + message + " on line " + line);
-      return false;
-    };
+    var businessCategories = [
+      "Restaurant",
+      "Retail",
+      "Service",
+      "Health",
+      "Beauty",
+      "Barbershop",
+      "Legal",
+      "Professional Services",
+      "Other"
+    ];
 
-    window.onunhandledrejection = function(event) {
-      var reason = event.reason && event.reason.message ? event.reason.message : String(event.reason);
-      showStatus("error", "Unexpected error: " + reason);
-      logMessage("Unexpected error: " + reason);
-    };
+    var communityCategories = [
+      "Food",
+      "Housing",
+      "Health & Mental Health",
+      "Jobs",
+      "Education",
+      "Legal Aid",
+      "Transportation",
+      "Family Support",
+      "Domestic Violence & Safety",
+      "Reentry & Recovery",
+      "Community Events",
+      "Mutual Aid",
+      "Clothing & Essentials",
+      "Financial Help",
+      "Veterans",
+      "Faith & Spiritual"
+    ];
 
     function byId(id) {
       return document.getElementById(id);
-    }
-
-    function pageReady() {
-      logMessage("JavaScript loaded.");
-
-      if (isPlaceholder(PARSE_APP_ID) || isPlaceholder(PARSE_REST_API_KEY)) {
-        showStatus("info", "Page loaded. Replace the Parse App ID and REST API Key before submitting.");
-      } else {
-        showStatus("success", "Page loaded. Ready to submit.");
-      }
-    }
-
-    function testPageScript() {
-      showStatus("success", "JavaScript is working. If submit fails, check the debug log below.");
-      logMessage("Test Page Script button clicked.");
-    }
-
-    function isPlaceholder(value) {
-      return !value || value.indexOf("PASTE_") !== -1 || value.indexOf("YOUR_") !== -1;
-    }
-
-    function logMessage(message) {
-      var box = byId("debugLog");
-      var time = new Date().toLocaleTimeString();
-      if (!box) return;
-
-      if (box.textContent === "Debug log will appear here.") {
-        box.textContent = "";
-      }
-
-      box.textContent += (box.textContent ? "\n" : "") + time + " - " + message;
-    }
-
-    function showStatus(type, message) {
-      var box = byId("statusBox");
-      if (!box) return;
-
-      box.className = "message-box " + type;
-      box.textContent = message;
-      box.style.display = "block";
-    }
-
-    function clearStatus() {
-      var box = byId("statusBox");
-      if (!box) return;
-
-      box.className = "message-box";
-      box.textContent = "";
-      box.style.display = "none";
     }
 
     function getValue(id) {
@@ -354,10 +315,30 @@
       return element && element.value ? element.value.trim() : "";
     }
 
-    function getNumberValue(id, fallback) {
-      var value = getValue(id);
-      var number = parseFloat(value);
-      return isNaN(number) ? fallback : number;
+    function isBusiness() {
+      return getValue("submissionType") === "Business";
+    }
+
+    function isCommunity() {
+      return getValue("submissionType") === "Community Resource";
+    }
+
+    function isPlaceholder(value) {
+      return !value || value.indexOf("PASTE_") !== -1 || value.indexOf("YOUR_") !== -1;
+    }
+
+    function showStatus(type, message) {
+      var box = byId("statusBox");
+      box.className = "message-box " + type;
+      box.textContent = message;
+      box.style.display = "block";
+    }
+
+    function clearStatus() {
+      var box = byId("statusBox");
+      box.className = "message-box";
+      box.textContent = "";
+      box.style.display = "none";
     }
 
     function showStep(stepNumber) {
@@ -368,29 +349,43 @@
 
       for (i = 1; i <= 5; i++) {
         step = byId("step" + i);
-        if (step) {
-          step.className = i === stepNumber ? "step active" : "step";
-        }
+        step.className = i === stepNumber ? "step active" : "step";
       }
 
       currentStep = stepNumber;
+      clearStatus();
       window.scrollTo(0, 0);
       return false;
     }
 
-    function nextStep() {
-      logMessage("Next clicked on step " + currentStep);
+    function updateCategoryOptions() {
+      var type = getValue("submissionType");
+      var categorySelect = byId("category");
+      var options = type === "Business" ? businessCategories : communityCategories;
+      var i;
 
-      if (!validateStep(currentStep)) {
-        return false;
+      categorySelect.innerHTML = '<option value="">Choose a category</option>';
+
+      for (i = 0; i < options.length; i++) {
+        categorySelect.innerHTML += '<option value="' + escapeHTML(options[i]) + '">' + escapeHTML(options[i]) + '</option>';
+      }
+
+      byId("nameLabel").textContent = type === "Business" ? "Business name" : "Resource name";
+      byId("categoryLabel").textContent = type === "Business" ? "Business category/type" : "Resource category/type";
+      byId("organizationGroup").style.display = type === "Community Resource" ? "block" : "none";
+    }
+
+    function nextStep() {
+      if (!validateStep(currentStep)) return false;
+
+      if (currentStep === 1) {
+        updateCategoryOptions();
       }
 
       return showStep(currentStep + 1);
     }
 
     function prevStep() {
-      logMessage("Back clicked on step " + currentStep);
-      clearStatus();
       return showStep(currentStep - 1);
     }
 
@@ -409,7 +404,7 @@
         }
 
         if (!getValue("category")) {
-          showStatus("error", "Please enter a category.");
+          showStatus("error", "Please choose a category.");
           return false;
         }
       }
@@ -467,8 +462,6 @@
       var submissionType = getValue("submissionType");
       var category = getValue("category");
       var zip = getValue("zip");
-      var latitude = getNumberValue("latitude", 0);
-      var longitude = getNumberValue("longitude", 0);
 
       var data = {
         submissionType: submissionType,
@@ -486,18 +479,12 @@
         state: getValue("state"),
         zip: zip,
         zipCode: zip,
-        latitude: latitude,
-        longitude: longitude,
         status: "pending",
         source: "github_pages_web_form"
       };
 
       if (submissionType === "Community Resource") {
-        data.communityLocation = {
-          "__type": "GeoPoint",
-          "latitude": latitude,
-          "longitude": longitude
-        };
+        data.organizationName = getValue("organizationName");
         data.tags = [];
         data.isUrgent = false;
         data.isFree = false;
@@ -508,8 +495,6 @@
     }
 
     function showReview() {
-      logMessage("Review clicked.");
-
       if (!validateStep(1)) {
         showStep(1);
         return false;
@@ -526,6 +511,7 @@
         "<strong>Type:</strong> " + escapeHTML(data.submissionType) + "<br>" +
         "<strong>Name:</strong> " + escapeHTML(data.name) + "<br>" +
         "<strong>Category:</strong> " + escapeHTML(data.category) + "<br>" +
+        (data.organizationName ? "<strong>Organization:</strong> " + escapeHTML(data.organizationName) + "<br>" : "") +
         "<strong>Description:</strong> " + escapeHTML(data.description || "Not provided") + "<br>" +
         "<strong>Phone:</strong> " + escapeHTML(data.phone || "Not provided") + "<br>" +
         "<strong>Email:</strong> " + escapeHTML(data.email || "Not provided") + "<br>" +
@@ -550,6 +536,7 @@
 
       try {
         var parsed = JSON.parse(responseText);
+
         if (parsed.error) {
           message += ": " + parsed.error;
         } else {
@@ -570,8 +557,6 @@
 
     function setBusy(isBusy) {
       var button = byId("submitButton");
-      if (!button) return;
-
       button.disabled = isBusy;
       button.textContent = isBusy ? "Submitting..." : "Submit to LinkFam";
     }
@@ -579,17 +564,17 @@
     function submitToBack4App(data) {
       return new Promise(function(resolve, reject) {
         if (typeof fetch !== "function") {
-          reject(new Error("This browser does not support fetch(). Try Chrome, Safari, Firefox, or Edge."));
+          reject(new Error("This browser does not support fetch()."));
           return;
         }
 
         if (isPlaceholder(PARSE_APP_ID)) {
-          reject(new Error("Missing Back4App Application ID. Replace PARSE_APP_ID in the HTML."));
+          reject(new Error("Missing Back4App Application ID."));
           return;
         }
 
         if (isPlaceholder(PARSE_REST_API_KEY)) {
-          reject(new Error("Missing Back4App REST API Key. Replace PARSE_REST_API_KEY in the HTML."));
+          reject(new Error("Missing Back4App REST API Key."));
           return;
         }
 
@@ -604,9 +589,6 @@
           }
         }
 
-        logMessage("POST " + url);
-        logMessage("Payload: " + JSON.stringify(payload));
-
         fetch(url, {
           method: "POST",
           headers: {
@@ -618,9 +600,6 @@
         })
           .then(function(response) {
             return response.text().then(function(responseText) {
-              logMessage("Back4App HTTP " + response.status);
-              logMessage("Back4App response: " + (responseText || "(empty response)"));
-
               if (!response.ok) {
                 reject(new Error(parseErrorMessage(response.status, responseText)));
                 return;
@@ -634,26 +613,15 @@
             });
           })
           .catch(function(error) {
-            if (String(error.message || error).indexOf("Failed to fetch") !== -1) {
-              reject(new Error("Failed to reach Back4App. Check internet, CORS/domain settings, Parse URL, or browser blockers."));
-              return;
-            }
-
             reject(error);
           });
       });
     }
 
-    function submitForm(event) {
-      if (event && event.preventDefault) {
-        event.preventDefault();
-      }
-
-      logMessage("Submit button clicked.");
+    function submitForm() {
       clearStatus();
 
       if (!validateBeforeSubmit()) {
-        logMessage("Submit stopped by validation.");
         return false;
       }
 
@@ -664,8 +632,6 @@
 
       submitToBack4App(data)
         .then(function(result) {
-          logMessage("Submission success.");
-
           byId("formCard").style.display = "none";
           byId("successMessage").style.display = "block";
 
@@ -676,7 +642,6 @@
           window.scrollTo(0, 0);
         })
         .catch(function(error) {
-          logMessage("Submission failed: " + error.message);
           showStatus("error", "Failed: " + error.message);
         })
         .then(function() {
