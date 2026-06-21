@@ -1,16 +1,13 @@
-
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
   <title>Add to LinkFam</title>
 
   <style>
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       margin: 0;
@@ -23,7 +20,7 @@
 
     .container {
       width: 100%;
-      max-width: 540px;
+      max-width: 560px;
       margin: 0 auto;
     }
 
@@ -113,7 +110,8 @@
     }
 
     .review-box,
-    .message-box {
+    .message-box,
+    .debug-log {
       margin-top: 16px;
       padding: 14px;
       border-radius: 12px;
@@ -153,6 +151,15 @@
       color: #ffdede;
     }
 
+    .debug-log {
+      display: block;
+      background: #111111;
+      border: 1px solid #333333;
+      color: #bbbbbb;
+      font-size: 12px;
+      white-space: pre-wrap;
+    }
+
     .success-screen {
       display: none;
       text-align: center;
@@ -165,43 +172,45 @@
   </style>
 </head>
 
-<body>
+<body onload="pageReady()">
   <main class="container">
     <section class="card" id="formCard">
       <h1>Add to LinkFam</h1>
       <p>Submit a business or community resource to be reviewed before it appears in the app.</p>
 
-      <form id="submissionForm">
-        <div class="step active" data-step="0">
+      <button type="button" class="secondary" onclick="testPageScript()">Test Page Script</button>
+
+      <form id="submissionForm" novalidate onsubmit="submitForm(event); return false;">
+        <div id="step1" class="step active">
           <div class="progress">Step 1 of 5</div>
 
           <label for="submissionType">What are you adding?</label>
-          <select id="submissionType" required>
+          <select id="submissionType">
             <option value="">Choose one</option>
             <option value="Business">Business</option>
             <option value="Community Resource">Community Resource</option>
           </select>
 
-          <button type="button" data-next>Next</button>
+          <button type="button" onclick="nextStep()">Next</button>
         </div>
 
-        <div class="step" data-step="1">
+        <div id="step2" class="step">
           <div class="progress">Step 2 of 5</div>
 
           <label for="name">Name</label>
-          <input id="name" type="text" placeholder="Business or resource name" required />
+          <input id="name" type="text" placeholder="Business or resource name" />
 
           <label for="category">Category</label>
-          <input id="category" type="text" placeholder="Food, health, legal, education, etc." required />
+          <input id="category" type="text" placeholder="Food, health, legal, education, etc." />
 
           <label for="description">Short Description</label>
           <textarea id="description" placeholder="Briefly describe what they offer"></textarea>
 
-          <button type="button" data-next>Next</button>
-          <button class="secondary" type="button" data-back>Back</button>
+          <button type="button" onclick="nextStep()">Next</button>
+          <button class="secondary" type="button" onclick="prevStep()">Back</button>
         </div>
 
-        <div class="step" data-step="2">
+        <div id="step3" class="step">
           <div class="progress">Step 3 of 5</div>
 
           <label for="phone">Phone</label>
@@ -216,11 +225,11 @@
           <label for="instagram">Instagram</label>
           <input id="instagram" type="text" placeholder="@username" />
 
-          <button type="button" data-next>Next</button>
-          <button class="secondary" type="button" data-back>Back</button>
+          <button type="button" onclick="nextStep()">Next</button>
+          <button class="secondary" type="button" onclick="prevStep()">Back</button>
         </div>
 
-        <div class="step" data-step="3">
+        <div id="step4" class="step">
           <div class="progress">Step 4 of 5</div>
 
           <label for="address">Address</label>
@@ -235,22 +244,29 @@
           <label for="zip">ZIP</label>
           <input id="zip" type="text" placeholder="ZIP code" />
 
-          <button type="button" id="reviewButton">Review</button>
-          <button class="secondary" type="button" data-back>Back</button>
+          <label for="latitude">Latitude Optional</label>
+          <input id="latitude" type="number" step="any" placeholder="Leave blank if unknown" />
+
+          <label for="longitude">Longitude Optional</label>
+          <input id="longitude" type="number" step="any" placeholder="Leave blank if unknown" />
+
+          <button type="button" onclick="showReview()">Review</button>
+          <button class="secondary" type="button" onclick="prevStep()">Back</button>
         </div>
 
-        <div class="step" data-step="4">
+        <div id="step5" class="step">
           <div class="progress">Step 5 of 5</div>
 
           <h2>Review Submission</h2>
           <div id="reviewBox" class="review-box"></div>
 
-          <button id="submitButton" type="submit">Submit to LinkFam</button>
-          <button class="secondary" type="button" data-back>Back</button>
+          <button id="submitButton" type="button" onclick="submitForm(event)">Submit to LinkFam</button>
+          <button class="secondary" type="button" onclick="prevStep()">Back</button>
         </div>
       </form>
 
       <div id="statusBox" class="message-box"></div>
+      <pre id="debugLog" class="debug-log">Debug log will appear here.</pre>
     </section>
 
     <section class="card success-screen" id="successMessage">
@@ -262,60 +278,131 @@
   </main>
 
   <script>
-    const PARSE_SERVER_URL = "https://parseapi.back4app.com";
-    const PARSE_APP_ID = "2AxqUa732w8sQviO38zmLdWlT1oQaJpKbq2NdwsR";
-    const PARSE_REST_API_KEY = "jjegdXfbfeyGjxXsmSaqXJm19c1UZL1pxWXwO5iv";
+    var PARSE_SERVER_URL = "https://parseapi.back4app.com";
+    var PARSE_APP_ID = "2AxqUa732w8sQviO38zmLdWlT1oQaJpKbq2NdwsR";
+    var PARSE_REST_API_KEY = "jjegdXfbfeyGjxXsmSaqXJm19c1UZL1pxWXwO5iv";
 
-    const steps = Array.from(document.querySelectorAll(".step"));
-    const form = document.getElementById("submissionForm");
-    const formCard = document.getElementById("formCard");
-    const successMessage = document.getElementById("successMessage");
-    const successDetails = document.getElementById("successDetails");
-    const reviewBox = document.getElementById("reviewBox");
-    const statusBox = document.getElementById("statusBox");
-    const submitButton = document.getElementById("submitButton");
+    var currentStep = 1;
 
-    let currentStep = 0;
+    window.onerror = function(message, source, line) {
+      showStatus("error", "JavaScript error: " + message + " on line " + line);
+      logMessage("JavaScript error: " + message + " on line " + line);
+      return false;
+    };
 
-    function getValue(id) {
-      const element = document.getElementById(id);
-      return element ? element.value.trim() : "";
+    window.onunhandledrejection = function(event) {
+      var reason = event.reason && event.reason.message ? event.reason.message : String(event.reason);
+      showStatus("error", "Unexpected error: " + reason);
+      logMessage("Unexpected error: " + reason);
+    };
+
+    function byId(id) {
+      return document.getElementById(id);
     }
 
-    function showStep(index) {
-      if (index < 0 || index >= steps.length) return;
+    function pageReady() {
+      logMessage("JavaScript loaded.");
 
-      currentStep = index;
+      if (isPlaceholder(PARSE_APP_ID) || isPlaceholder(PARSE_REST_API_KEY)) {
+        showStatus("info", "Page loaded. Replace the Parse App ID and REST API Key before submitting.");
+      } else {
+        showStatus("success", "Page loaded. Ready to submit.");
+      }
+    }
 
-      steps.forEach(function(step, stepIndex) {
-        step.classList.toggle("active", stepIndex === currentStep);
-      });
+    function testPageScript() {
+      showStatus("success", "JavaScript is working. If submit fails, check the debug log below.");
+      logMessage("Test Page Script button clicked.");
+    }
 
-      clearStatus();
-      window.scrollTo({ top: 0, behavior: "smooth" });
+    function isPlaceholder(value) {
+      return !value || value.indexOf("PASTE_") !== -1 || value.indexOf("YOUR_") !== -1;
+    }
+
+    function logMessage(message) {
+      var box = byId("debugLog");
+      var time = new Date().toLocaleTimeString();
+      if (!box) return;
+
+      if (box.textContent === "Debug log will appear here.") {
+        box.textContent = "";
+      }
+
+      box.textContent += (box.textContent ? "\n" : "") + time + " - " + message;
     }
 
     function showStatus(type, message) {
-      statusBox.className = "message-box " + type;
-      statusBox.textContent = message;
-      statusBox.style.display = "block";
+      var box = byId("statusBox");
+      if (!box) return;
+
+      box.className = "message-box " + type;
+      box.textContent = message;
+      box.style.display = "block";
     }
 
     function clearStatus() {
-      statusBox.className = "message-box";
-      statusBox.textContent = "";
-      statusBox.style.display = "none";
+      var box = byId("statusBox");
+      if (!box) return;
+
+      box.className = "message-box";
+      box.textContent = "";
+      box.style.display = "none";
     }
 
-    function validateStep() {
+    function getValue(id) {
+      var element = byId(id);
+      return element && element.value ? element.value.trim() : "";
+    }
+
+    function getNumberValue(id, fallback) {
+      var value = getValue(id);
+      var number = parseFloat(value);
+      return isNaN(number) ? fallback : number;
+    }
+
+    function showStep(stepNumber) {
+      var i;
+      var step;
+
+      if (stepNumber < 1 || stepNumber > 5) return false;
+
+      for (i = 1; i <= 5; i++) {
+        step = byId("step" + i);
+        if (step) {
+          step.className = i === stepNumber ? "step active" : "step";
+        }
+      }
+
+      currentStep = stepNumber;
+      window.scrollTo(0, 0);
+      return false;
+    }
+
+    function nextStep() {
+      logMessage("Next clicked on step " + currentStep);
+
+      if (!validateStep(currentStep)) {
+        return false;
+      }
+
+      return showStep(currentStep + 1);
+    }
+
+    function prevStep() {
+      logMessage("Back clicked on step " + currentStep);
+      clearStatus();
+      return showStep(currentStep - 1);
+    }
+
+    function validateStep(stepNumber) {
       clearStatus();
 
-      if (currentStep === 0 && !getValue("submissionType")) {
+      if (stepNumber === 1 && !getValue("submissionType")) {
         showStatus("error", "Please choose Business or Community Resource.");
         return false;
       }
 
-      if (currentStep === 1) {
+      if (stepNumber === 2) {
         if (!getValue("name")) {
           showStatus("error", "Please enter a name.");
           return false;
@@ -330,11 +417,65 @@
       return true;
     }
 
+    function validateBeforeSubmit() {
+      if (!getValue("submissionType")) {
+        showStep(1);
+        showStatus("error", "Failed: Missing submission type.");
+        return false;
+      }
+
+      if (!getValue("name")) {
+        showStep(2);
+        showStatus("error", "Failed: Missing name.");
+        return false;
+      }
+
+      if (!getValue("category")) {
+        showStep(2);
+        showStatus("error", "Failed: Missing category.");
+        return false;
+      }
+
+      return true;
+    }
+
+    function escapeHTML(value) {
+      return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function cleanData(data) {
+      var cleaned = {};
+      var key;
+
+      for (key in data) {
+        if (Object.prototype.hasOwnProperty.call(data, key)) {
+          if (data[key] !== "" && data[key] !== null && typeof data[key] !== "undefined") {
+            cleaned[key] = data[key];
+          }
+        }
+      }
+
+      return cleaned;
+    }
+
     function getFormData() {
-      return {
-        submissionType: getValue("submissionType"),
+      var submissionType = getValue("submissionType");
+      var category = getValue("category");
+      var zip = getValue("zip");
+      var latitude = getNumberValue("latitude", 0);
+      var longitude = getNumberValue("longitude", 0);
+
+      var data = {
+        submissionType: submissionType,
         name: getValue("name"),
-        category: getValue("category"),
+        type: category,
+        category: category,
+        primaryCategory: category,
         description: getValue("description"),
         phone: getValue("phone"),
         email: getValue("email"),
@@ -343,156 +484,208 @@
         address: getValue("address"),
         city: getValue("city"),
         state: getValue("state"),
-        zip: getValue("zip"),
+        zip: zip,
+        zipCode: zip,
+        latitude: latitude,
+        longitude: longitude,
         status: "pending",
-        source: "web_submit_form"
+        source: "github_pages_web_form"
       };
+
+      if (submissionType === "Community Resource") {
+        data.communityLocation = {
+          "__type": "GeoPoint",
+          "latitude": latitude,
+          "longitude": longitude
+        };
+        data.tags = [];
+        data.isUrgent = false;
+        data.isFree = false;
+        data.verificationStatus = "unverified";
+      }
+
+      return cleanData(data);
     }
 
-    function escapeHTML(value) {
-      return String(value || "")
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
-    }
+    function showReview() {
+      logMessage("Review clicked.");
 
-    function renderReview() {
-      if (!validateStep()) return;
+      if (!validateStep(1)) {
+        showStep(1);
+        return false;
+      }
 
-      const data = getFormData();
+      if (!validateStep(2)) {
+        showStep(2);
+        return false;
+      }
 
-      reviewBox.innerHTML = `
-        <strong>Type:</strong> ${escapeHTML(data.submissionType)}<br>
-        <strong>Name:</strong> ${escapeHTML(data.name)}<br>
-        <strong>Category:</strong> ${escapeHTML(data.category)}<br>
-        <strong>Description:</strong> ${escapeHTML(data.description || "Not provided")}<br>
-        <strong>Phone:</strong> ${escapeHTML(data.phone || "Not provided")}<br>
-        <strong>Email:</strong> ${escapeHTML(data.email || "Not provided")}<br>
-        <strong>Website:</strong> ${escapeHTML(data.website || "Not provided")}<br>
-        <strong>Instagram:</strong> ${escapeHTML(data.instagram || "Not provided")}<br>
-        <strong>Address:</strong> ${escapeHTML(data.address || "Not provided")}<br>
-        <strong>City:</strong> ${escapeHTML(data.city || "Not provided")}<br>
-        <strong>State:</strong> ${escapeHTML(data.state || "Not provided")}<br>
-        <strong>ZIP:</strong> ${escapeHTML(data.zip || "Not provided")}
-      `;
+      var data = getFormData();
 
-      showStep(4);
+      byId("reviewBox").innerHTML =
+        "<strong>Type:</strong> " + escapeHTML(data.submissionType) + "<br>" +
+        "<strong>Name:</strong> " + escapeHTML(data.name) + "<br>" +
+        "<strong>Category:</strong> " + escapeHTML(data.category) + "<br>" +
+        "<strong>Description:</strong> " + escapeHTML(data.description || "Not provided") + "<br>" +
+        "<strong>Phone:</strong> " + escapeHTML(data.phone || "Not provided") + "<br>" +
+        "<strong>Email:</strong> " + escapeHTML(data.email || "Not provided") + "<br>" +
+        "<strong>Website:</strong> " + escapeHTML(data.website || "Not provided") + "<br>" +
+        "<strong>Instagram:</strong> " + escapeHTML(data.instagram || "Not provided") + "<br>" +
+        "<strong>Address:</strong> " + escapeHTML(data.address || "Not provided") + "<br>" +
+        "<strong>City:</strong> " + escapeHTML(data.city || "Not provided") + "<br>" +
+        "<strong>State:</strong> " + escapeHTML(data.state || "Not provided") + "<br>" +
+        "<strong>ZIP:</strong> " + escapeHTML(data.zip || "Not provided");
+
+      showStep(5);
+      showStatus("info", "Review your submission, then press Submit to LinkFam.");
+      return false;
     }
 
     function getParseClassName(submissionType) {
-      return submissionType === "Business"
-        ? "BusinessSubmissions"
-        : "CommunitySubmissions";
+      return submissionType === "Business" ? "BusinessSubmissions" : "CommunitySubmissions";
     }
 
-    async function submitToBack4App(data) {
-      if (!PARSE_APP_ID || PARSE_APP_ID.includes("PASTE_")) {
-        throw new Error("Missing Back4App Application ID. Replace PARSE_APP_ID in the HTML.");
-      }
-
-      if (!PARSE_REST_API_KEY || PARSE_REST_API_KEY.includes("PASTE_")) {
-        throw new Error("Missing Back4App REST API Key. Replace PARSE_REST_API_KEY in the HTML.");
-      }
-
-      const className = getParseClassName(data.submissionType);
-      const url = `${PARSE_SERVER_URL}/classes/${className}`;
-
-      const controller = new AbortController();
-      const timeoutId = setTimeout(function() {
-        controller.abort();
-      }, 15000);
+    function parseErrorMessage(status, responseText) {
+      var message = "HTTP " + status;
 
       try {
-        const response = await fetch(url, {
+        var parsed = JSON.parse(responseText);
+        if (parsed.error) {
+          message += ": " + parsed.error;
+        } else {
+          message += ": " + responseText;
+        }
+
+        if (parsed.code) {
+          message += " (Parse code " + parsed.code + ")";
+        }
+      } catch (error) {
+        if (responseText) {
+          message += ": " + responseText;
+        }
+      }
+
+      return message;
+    }
+
+    function setBusy(isBusy) {
+      var button = byId("submitButton");
+      if (!button) return;
+
+      button.disabled = isBusy;
+      button.textContent = isBusy ? "Submitting..." : "Submit to LinkFam";
+    }
+
+    function submitToBack4App(data) {
+      return new Promise(function(resolve, reject) {
+        if (typeof fetch !== "function") {
+          reject(new Error("This browser does not support fetch(). Try Chrome, Safari, Firefox, or Edge."));
+          return;
+        }
+
+        if (isPlaceholder(PARSE_APP_ID)) {
+          reject(new Error("Missing Back4App Application ID. Replace PARSE_APP_ID in the HTML."));
+          return;
+        }
+
+        if (isPlaceholder(PARSE_REST_API_KEY)) {
+          reject(new Error("Missing Back4App REST API Key. Replace PARSE_REST_API_KEY in the HTML."));
+          return;
+        }
+
+        var className = getParseClassName(data.submissionType);
+        var url = PARSE_SERVER_URL + "/classes/" + className;
+        var payload = {};
+        var key;
+
+        for (key in data) {
+          if (Object.prototype.hasOwnProperty.call(data, key) && key !== "submissionType") {
+            payload[key] = data[key];
+          }
+        }
+
+        logMessage("POST " + url);
+        logMessage("Payload: " + JSON.stringify(payload));
+
+        fetch(url, {
           method: "POST",
           headers: {
             "X-Parse-Application-Id": PARSE_APP_ID,
             "X-Parse-REST-API-Key": PARSE_REST_API_KEY,
             "Content-Type": "application/json"
           },
-          body: JSON.stringify(data),
-          signal: controller.signal
-        });
+          body: JSON.stringify(payload)
+        })
+          .then(function(response) {
+            return response.text().then(function(responseText) {
+              logMessage("Back4App HTTP " + response.status);
+              logMessage("Back4App response: " + (responseText || "(empty response)"));
 
-        const responseText = await response.text();
+              if (!response.ok) {
+                reject(new Error(parseErrorMessage(response.status, responseText)));
+                return;
+              }
 
-        if (!response.ok) {
-          throw new Error(responseText || `Request failed with status ${response.status}`);
-        }
+              try {
+                resolve(responseText ? JSON.parse(responseText) : {});
+              } catch (error) {
+                resolve({ rawResponse: responseText });
+              }
+            });
+          })
+          .catch(function(error) {
+            if (String(error.message || error).indexOf("Failed to fetch") !== -1) {
+              reject(new Error("Failed to reach Back4App. Check internet, CORS/domain settings, Parse URL, or browser blockers."));
+              return;
+            }
 
-        return responseText ? JSON.parse(responseText) : {};
-      } finally {
-        clearTimeout(timeoutId);
-      }
+            reject(error);
+          });
+      });
     }
 
-    async function handleSubmit(event) {
-      event.preventDefault();
+    function submitForm(event) {
+      if (event && event.preventDefault) {
+        event.preventDefault();
+      }
 
+      logMessage("Submit button clicked.");
       clearStatus();
 
-      const data = getFormData();
-
-      if (!data.submissionType) {
-        showStatus("error", "Failed: Missing submission type. Go back to Step 1.");
-        return;
+      if (!validateBeforeSubmit()) {
+        logMessage("Submit stopped by validation.");
+        return false;
       }
 
-      if (!data.name || !data.category) {
-        showStatus("error", "Failed: Missing name or category. Go back to Step 2.");
-        return;
-      }
+      var data = getFormData();
 
-      try {
-        submitButton.disabled = true;
-        submitButton.textContent = "Submitting...";
-        showStatus("info", "Submitting to LinkFam... Please wait.");
+      setBusy(true);
+      showStatus("info", "Submitting to LinkFam... Please wait.");
 
-        const result = await submitToBack4App(data);
+      submitToBack4App(data)
+        .then(function(result) {
+          logMessage("Submission success.");
 
-        showStatus("success", "Success: Your submission was sent to LinkFam.");
+          byId("formCard").style.display = "none";
+          byId("successMessage").style.display = "block";
 
-        formCard.style.display = "none";
-        successMessage.style.display = "block";
+          if (result && result.objectId) {
+            byId("successDetails").textContent = "Submission ID: " + result.objectId;
+          }
 
-        if (result && result.objectId) {
-          successDetails.textContent = "Submission ID: " + result.objectId;
-        }
+          window.scrollTo(0, 0);
+        })
+        .catch(function(error) {
+          logMessage("Submission failed: " + error.message);
+          showStatus("error", "Failed: " + error.message);
+        })
+        .then(function() {
+          setBusy(false);
+        });
 
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      } catch (error) {
-        console.error("Submission failed:", error);
-
-        const message = error.name === "AbortError"
-          ? "Failed: The request timed out. Please check your internet connection and try again."
-          : "Failed: " + error.message;
-
-        showStatus("error", message);
-      } finally {
-        submitButton.disabled = false;
-        submitButton.textContent = "Submit to LinkFam";
-      }
+      return false;
     }
-
-    document.querySelectorAll("[data-next]").forEach(function(button) {
-      button.addEventListener("click", function() {
-        if (validateStep()) {
-          showStep(currentStep + 1);
-        }
-      });
-    });
-
-    document.querySelectorAll("[data-back]").forEach(function(button) {
-      button.addEventListener("click", function() {
-        showStep(currentStep - 1);
-      });
-    });
-
-    document.getElementById("reviewButton").addEventListener("click", renderReview);
-    form.addEventListener("submit", handleSubmit);
   </script>
 </body>
 </html>
-
+```
