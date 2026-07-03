@@ -14,11 +14,12 @@
 
     body {
       margin: 0;
-      min-height: 100vh;
+      min-height: 100dvh;
       font-family: Arial, sans-serif;
       background: #0f0f0f;
       color: #ffffff;
       padding: 20px;
+      padding-bottom: 320px;
     }
 
     .container {
@@ -648,8 +649,19 @@
           setBusy(false);
         });
 
-      return false;
-    }
+      return false;}
+
+    
+      document.querySelectorAll("input, textarea, select").forEach(function(el) {
+      el.addEventListener("focus", function() {
+      setTimeout(function() {
+      el.scrollIntoView({
+        behavior: "smooth",
+        block: "center"
+      });
+    }, 300);
+  });
+});
   </script>
 </body>
 </html>
