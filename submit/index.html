@@ -82,6 +82,22 @@
       resize: vertical;
     }
 
+    .image-preview {
+      display: none;
+      width: 100%;
+      margin-top: 12px;
+      border-radius: 14px;
+      border: 1px solid #333333;
+      max-height: 260px;
+      object-fit: cover;
+      background: #111111;
+    }
+
+    .small {
+      color: #bbbbbb;
+      font-size: 14px;
+    }
+
     button {
       width: 100%;
       margin-top: 18px;
@@ -165,11 +181,6 @@
       display: none;
       text-align: center;
     }
-
-    .small {
-      color: #bbbbbb;
-      font-size: 14px;
-    }
   </style>
 </head>
 
@@ -210,7 +221,13 @@
           </div>
 
           <label for="description">Short Description</label>
-          <textarea id="description" placeholder="Briefly describe what they offer"></textarea>
+          <textarea id="description" maxlength="500" placeholder="Briefly describe what they offer"></textarea>
+          <p class="small">Maximum 500 characters.</p>
+
+          <label for="imageFile">Image / Logo</label>
+          <input id="imageFile" type="file" accept="image/*" />
+          <p class="small">Optional. Upload a logo, storefront, flyer, or clear image. Max 5 MB.</p>
+          <img id="imagePreview" class="image-preview" alt="Selected image preview" />
 
           <button type="button" onclick="nextStep()">Next</button>
           <button class="secondary" type="button" onclick="prevStep()">Back</button>
@@ -245,10 +262,10 @@
           <input id="city" type="text" placeholder="City" />
 
           <label for="state">State</label>
-          <input id="state" type="text" placeholder="State" />
+          <input id="state" type="text" placeholder="State" maxlength="2" />
 
           <label for="zip">ZIP</label>
-          <input id="zip" type="text" placeholder="ZIP code" />
+          <input id="zip" type="text" inputmode="numeric" placeholder="ZIP code" maxlength="10" />
 
           <button type="button" onclick="showReview()">Review</button>
           <button class="secondary" type="button" onclick="prevStep()">Back</button>
@@ -282,6 +299,9 @@
     var PARSE_REST_API_KEY = "jjegdXfbfeyGjxXsmSaqXJm19c1UZL1pxWXwO5iv";
 
     var currentStep = 1;
+    var MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
+    var compressedImageBlob = null;
+    var compressedImageName = "";
 
     var businessCategories = [
       "Restaurant",
@@ -408,6 +428,16 @@
       return showStep(currentStep - 1);
     }
 
+    function isValidEmail(value) {
+      if (!value) return true;
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+    }
+
+    function isValidWebsite(value) {
+      if (!value) return true;
+      return /^https?:\/\/.+\..+/.test(value);
+    }
+
     function validateStep(stepNumber) {
       clearStatus();
 
@@ -429,27 +459,44 @@
           keepVisible(byId("category"));
           return false;
         }
+
+        if (getValue("description").length > 500) {
+          showStatus("error", "Please shorten the description to 500 characters or less.");
+          keepVisible(byId("description"));
+          return false;
+        }
+      }
+
+      if (stepNumber === 3) {
+        if (!isValidEmail(getValue("email"))) {
+          showStatus("error", "Please enter a valid email address or leave it blank.");
+          keepVisible(byId("email"));
+          return false;
+        }
+
+        if (!isValidWebsite(getValue("website"))) {
+          showStatus("error", "Please enter the website starting with https:// or leave it blank.");
+          keepVisible(byId("website"));
+          return false;
+        }
       }
 
       return true;
     }
 
     function validateBeforeSubmit() {
-      if (!getValue("submissionType")) {
+      if (!validateStep(1)) {
         showStep(1);
-        showStatus("error", "Failed: Missing submission type.");
         return false;
       }
 
-      if (!getValue("name")) {
+      if (!validateStep(2)) {
         showStep(2);
-        showStatus("error", "Failed: Missing name.");
         return false;
       }
 
-      if (!getValue("category")) {
-        showStep(2);
-        showStatus("error", "Failed: Missing category.");
+      if (!validateStep(3)) {
+        showStep(3);
         return false;
       }
 
@@ -480,10 +527,25 @@
       return cleaned;
     }
 
+    function normalizeWebsite(value) {
+      if (!value) return "";
+      if (value.indexOf("http://") === 0 || value.indexOf("https://") === 0) {
+        return value;
+      }
+      return "https://" + value;
+    }
+
+    function normalizeInstagram(value) {
+      if (!value) return "";
+      return value.charAt(0) === "@" ? value : "@" + value;
+    }
+
     function getFormData() {
       var submissionType = getValue("submissionType");
       var category = getValue("category");
       var zip = getValue("zip");
+      var website = normalizeWebsite(getValue("website"));
+      var instagram = normalizeInstagram(getValue("instagram"));
 
       var data = {
         submissionType: submissionType,
@@ -494,11 +556,11 @@
         description: getValue("description"),
         phone: getValue("phone"),
         email: getValue("email"),
-        website: getValue("website"),
-        instagram: getValue("instagram"),
+        website: website,
+        instagram: instagram,
         address: getValue("address"),
         city: getValue("city"),
-        state: getValue("state"),
+        state: getValue("state").toUpperCase(),
         zip: zip,
         zipCode: zip,
         status: "pending",
@@ -527,7 +589,13 @@
         return false;
       }
 
+      if (!validateStep(3)) {
+        showStep(3);
+        return false;
+      }
+
       var data = getFormData();
+      var imageFile = byId("imageFile").files[0];
 
       byId("reviewBox").innerHTML =
         "<strong>Type:</strong> " + escapeHTML(data.submissionType) + "<br>" +
@@ -535,6 +603,7 @@
         "<strong>Category:</strong> " + escapeHTML(data.category) + "<br>" +
         (data.organizationName ? "<strong>Organization:</strong> " + escapeHTML(data.organizationName) + "<br>" : "") +
         "<strong>Description:</strong> " + escapeHTML(data.description || "Not provided") + "<br>" +
+        "<strong>Image:</strong> " + escapeHTML(imageFile ? imageFile.name : "Not provided") + "<br>" +
         "<strong>Phone:</strong> " + escapeHTML(data.phone || "Not provided") + "<br>" +
         "<strong>Email:</strong> " + escapeHTML(data.email || "Not provided") + "<br>" +
         "<strong>Website:</strong> " + escapeHTML(data.website || "Not provided") + "<br>" +
@@ -577,10 +646,137 @@
       return message;
     }
 
-    function setBusy(isBusy) {
+    function setBusy(isBusy, message) {
       var button = byId("submitButton");
       button.disabled = isBusy;
-      button.textContent = isBusy ? "Submitting..." : "Submit to LinkFam";
+      button.textContent = isBusy ? message || "Submitting..." : "Submit to LinkFam";
+    }
+
+    function getSafeFileName(originalName) {
+      var extension = ".jpg";
+      var cleanName = String(originalName || "linkfam-image")
+        .toLowerCase()
+        .replace(/[^a-z0-9.]+/g, "-");
+
+      if (cleanName.indexOf(".png") !== -1) extension = ".png";
+      if (cleanName.indexOf(".webp") !== -1) extension = ".webp";
+      if (cleanName.indexOf(".jpeg") !== -1) extension = ".jpg";
+      if (cleanName.indexOf(".jpg") !== -1) extension = ".jpg";
+
+      return "linkfam-" + Date.now() + extension;
+    }
+
+    function compressImage(file) {
+      return new Promise(function(resolve, reject) {
+        if (!file) {
+          resolve(null);
+          return;
+        }
+
+        if (!file.type || file.type.indexOf("image/") !== 0) {
+          reject(new Error("Please choose a valid image file."));
+          return;
+        }
+
+        if (file.size > MAX_IMAGE_SIZE_BYTES) {
+          reject(new Error("Image is too large. Please choose an image under 5 MB."));
+          return;
+        }
+
+        var reader = new FileReader();
+
+        reader.onload = function(event) {
+          var image = new Image();
+
+          image.onload = function() {
+            var maxWidth = 1200;
+            var maxHeight = 1200;
+            var width = image.width;
+            var height = image.height;
+
+            if (width > height && width > maxWidth) {
+              height = Math.round(height * maxWidth / width);
+              width = maxWidth;
+            } else if (height > maxHeight) {
+              width = Math.round(width * maxHeight / height);
+              height = maxHeight;
+            }
+
+            var canvas = document.createElement("canvas");
+            canvas.width = width;
+            canvas.height = height;
+
+            var context = canvas.getContext("2d");
+            context.drawImage(image, 0, 0, width, height);
+
+            canvas.toBlob(function(blob) {
+              if (!blob) {
+                reject(new Error("Could not prepare image for upload."));
+                return;
+              }
+
+              compressedImageName = getSafeFileName(file.name);
+              resolve(blob);
+            }, "image/jpeg", 0.82);
+          };
+
+          image.onerror = function() {
+            reject(new Error("Could not read the selected image."));
+          };
+
+          image.src = event.target.result;
+        };
+
+        reader.onerror = function() {
+          reject(new Error("Could not load the selected image."));
+        };
+
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function uploadImageToBack4App(blob, fileName) {
+      return new Promise(function(resolve, reject) {
+        if (!blob) {
+          resolve("");
+          return;
+        }
+
+        if (typeof fetch !== "function") {
+          reject(new Error("This browser does not support image uploads."));
+          return;
+        }
+
+        var url = PARSE_SERVER_URL + "/files/" + encodeURIComponent(fileName);
+
+        fetch(url, {
+          method: "POST",
+          headers: {
+            "X-Parse-Application-Id": PARSE_APP_ID,
+            "X-Parse-REST-API-Key": PARSE_REST_API_KEY,
+            "Content-Type": "image/jpeg"
+          },
+          body: blob
+        })
+          .then(function(response) {
+            return response.text().then(function(responseText) {
+              if (!response.ok) {
+                reject(new Error(parseErrorMessage(response.status, responseText)));
+                return;
+              }
+
+              try {
+                var parsed = JSON.parse(responseText);
+                resolve(parsed.url || "");
+              } catch (error) {
+                reject(new Error("Image uploaded, but the response could not be read."));
+              }
+            });
+          })
+          .catch(function(error) {
+            reject(error);
+          });
+      });
     }
 
     function submitToBack4App(data) {
@@ -649,10 +845,20 @@
 
       var data = getFormData();
 
-      setBusy(true);
-      showStatus("info", "Submitting to LinkFam... Please wait.");
+      setBusy(true, "Preparing image...");
+      showStatus("info", "Preparing your submission...");
 
-      submitToBack4App(data)
+      uploadImageToBack4App(compressedImageBlob, compressedImageName)
+        .then(function(imageUrl) {
+          if (imageUrl) {
+            data.imageUrl = imageUrl;
+          }
+
+          setBusy(true, "Submitting...");
+          showStatus("info", imageUrl ? "Image uploaded. Submitting to LinkFam..." : "Submitting to LinkFam...");
+
+          return submitToBack4App(data);
+        })
         .then(function(result) {
           byId("formCard").style.display = "none";
           byId("successMessage").style.display = "block";
@@ -672,6 +878,34 @@
 
       return false;
     }
+
+    byId("imageFile").addEventListener("change", function() {
+      var file = this.files && this.files[0] ? this.files[0] : null;
+      var preview = byId("imagePreview");
+
+      compressedImageBlob = null;
+      compressedImageName = "";
+      preview.style.display = "none";
+      preview.removeAttribute("src");
+      clearStatus();
+
+      if (!file) return;
+
+      compressImage(file)
+        .then(function(blob) {
+          compressedImageBlob = blob;
+
+          var previewUrl = URL.createObjectURL(blob);
+          preview.src = previewUrl;
+          preview.style.display = "block";
+
+          showStatus("success", "Image selected and ready to upload.");
+        })
+        .catch(function(error) {
+          byId("imageFile").value = "";
+          showStatus("error", error.message);
+        });
+    });
 
     document.querySelectorAll("input, textarea, select").forEach(function(el) {
       el.addEventListener("focus", function() {
