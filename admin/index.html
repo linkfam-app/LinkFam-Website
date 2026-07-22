@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>LinkFam Admin</title>
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      color-scheme: dark;
+      --gold: #d8a85d;
+      --bg: #0f0f0f;
+      --card: #1a1a1a;
+      --border: #333;
+      --muted: #bbb;
+      --danger: #d96363;
+      --success: #78d69a;
+    }
+    body {
+      margin: 0;
+      min-height: 100dvh;
+      padding: 22px;
+      background: var(--bg);
+      color: #fff;
+      font-family: Arial, sans-serif;
+    }
+    .container { width: 100%; max-width: 980px; margin: 0 auto; }
+    .card {
+      padding: 22px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+    }
+    h1 { margin: 0 0 8px; color: var(--gold); }
+    h2 { margin: 0; font-size: 21px; }
+    p { color: #ddd; line-height: 1.45; }
+    label { display: block; margin: 14px 0 6px; font-weight: bold; }
+    input, select {
+      width: 100%;
+      padding: 13px;
+      border: 1px solid #444;
+      border-radius: 10px;
+      background: #fff;
+      color: #111;
+      font-size: 16px;
+    }
+    button {
+      padding: 12px 16px;
+      border: 0;
+      border-radius: 10px;
+      background: var(--gold);
+      color: #111;
+      font-weight: bold;
+      font-size: 15px;
+      cursor: pointer;
+    }
+    button:disabled { opacity: .55; cursor: wait; }
+    button.secondary { color: var(--gold); background: transparent; border: 1px solid var(--gold); }
+    button.danger { color: #fff; background: #852f2f; }
+    .login { max-width: 440px; margin: 8vh auto 0; }
+    .login button { width: 100%; margin-top: 20px; }
+    .message { display: none; margin-top: 14px; padding: 12px; border-radius: 10px; }
+    .message.show { display: block; }
+    .message.error { color: #ffdede; background: #3a1111; border: 1px solid #8a2c2c; }
+    .message.success { color: #c9ffd9; background: #102417; border: 1px solid #2f7a4f; }
+    .topbar { display: flex; gap: 14px; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 18px; }
+    .tabs button { flex: 1; background: transparent; color: var(--gold); border: 1px solid #6f5a2f; }
+    .tabs button.active { background: var(--gold); color: #111; }
+    .list { display: grid; gap: 14px; }
+    .submission { padding: 18px; background: #151515; border: 1px solid var(--border); border-radius: 14px; }
+    .submission-head { display: flex; gap: 12px; align-items: start; justify-content: space-between; }
+    .meta { margin-top: 5px; color: var(--muted); font-size: 14px; }
+    .description { margin: 14px 0; white-space: pre-wrap; }
+    .details { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 18px; }
+    .detail { min-width: 0; color: #ddd; word-break: break-word; }
+    .detail strong { color: #fff; }
+    .actions { display: grid; grid-template-columns: minmax(150px, 1fr) auto auto; gap: 10px; align-items: end; margin-top: 18px; }
+    .actions label { margin-top: 0; }
+    .empty { padding: 36px 10px; color: var(--muted); text-align: center; }
+    .loading { padding: 36px; color: var(--gold); text-align: center; }
+    .hidden { display: none !important; }
+    @media (max-width: 680px) {
+      body { padding: 14px; }
+      .details, .actions { grid-template-columns: 1fr; }
+      .actions button { width: 100%; }
+      .topbar { align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <section id="loginView" class="card login">
+      <h1>LinkFam Admin</h1>
+      <p>Sign in with the Back4App account assigned to the Admin role.</p>
+      <form id="loginForm">
+        <label for="username">Username</label>
+        <input id="username" autocomplete="username" required />
+        <label for="password">Password</label>
+        <input id="password" type="password" autocomplete="current-password" required />
+        <button id="loginButton" type="submit">Sign In</button>
+      </form>
+      <div id="loginMessage" class="message error" role="alert"></div>
+    </section>
+
+    <section id="adminView" class="hidden">
+      <div class="topbar">
+        <div><h1>Submission Review</h1><div id="signedInAs" class="meta"></div></div>
+        <button id="logoutButton" class="secondary" type="button">Sign Out</button>
+      </div>
+      <div class="tabs">
+        <button type="button" class="active" data-type="business">Businesses</button>
+        <button type="button" data-type="community">Community</button>
+      </div>
+      <div id="adminMessage" class="message" role="status"></div>
+      <div id="loading" class="loading">Loading submissions…</div>
+      <div id="submissionList" class="list"></div>
+    </section>
+  </main>
+
+  <script>
+    const PARSE_SERVER_URL = 'https://parseapi.back4app.com';
+    const PARSE_APP_ID = '2AxqUa732w8sQviO38zmLdWlT1oQaJpKbq2NdwsR';
+    const PARSE_REST_API_KEY = 'jjegdXfbfeyGjxXsmSaqXJm19c1UZL1pxWXwO5iv';
+    const SESSION_KEY = 'linkfam_admin_session';
+
+    let sessionToken = sessionStorage.getItem(SESSION_KEY) || '';
+    let currentType = 'business';
+
+    const loginView = document.getElementById('loginView');
+    const adminView = document.getElementById('adminView');
+    const submissionList = document.getElementById('submissionList');
+    const loading = document.getElementById('loading');
+
+    function headers(authenticated = true) {
+      const value = {
+        'X-Parse-Application-Id': PARSE_APP_ID,
+        'X-Parse-REST-API-Key': PARSE_REST_API_KEY,
+        'Content-Type': 'application/json'
+      };
+      if (authenticated && sessionToken) value['X-Parse-Session-Token'] = sessionToken;
+      return value;
+    }
+
+    async function parseRequest(path, options = {}) {
+      const response = await fetch(PARSE_SERVER_URL + path, {
+        method: options.method || 'POST',
+        headers: headers(options.authenticated !== false),
+        body: options.body === undefined ? undefined : JSON.stringify(options.body)
+      });
+      let data = {};
+      try { data = await response.json(); } catch (_) {}
+      if (!response.ok || data.error) throw new Error(data.error || `Request failed (${response.status})`);
+      return data;
+    }
+
+    async function cloudFunction(name, params = {}) {
+      const data = await parseRequest('/functions/' + name, { body: params });
+      return data.result;
+    }
+
+    function showMessage(id, text, kind) {
+      const box = document.getElementById(id);
+      box.textContent = text;
+      box.className = `message show ${kind}`;
+    }
+
+    function clearMessage(id) {
+      const box = document.getElementById(id);
+      box.textContent = '';
+      box.className = 'message';
+    }
+
+    function textValue(value) {
+      if (value === null || value === undefined) return '';
+      return String(value).trim();
+    }
+
+    function firstValue(object, keys) {
+      for (const key of keys) {
+        const value = textValue(object[key]);
+        if (value) return value;
+      }
+      return '';
+    }
+
+    function addDetail(parent, label, value) {
+      if (!value) return;
+      const item = document.createElement('div');
+      item.className = 'detail';
+      const strong = document.createElement('strong');
+      strong.textContent = label + ': ';
+      item.append(strong, document.createTextNode(value));
+      parent.appendChild(item);
+    }
+
+    function renderSubmission(item) {
+      const id = textValue(item.objectId);
+      const card = document.createElement('article');
+      card.className = 'submission';
+      card.dataset.id = id;
+
+      const head = document.createElement('div');
+      head.className = 'submission-head';
+      const titleWrap = document.createElement('div');
+      const title = document.createElement('h2');
+      title.textContent = firstValue(item, ['name', 'businessName', 'communityName', 'organizationName', 'title']) || 'Unnamed submission';
+      const meta = document.createElement('div');
+      meta.className = 'meta';
+      const created = item.createdAt ? new Date(item.createdAt).toLocaleString() : '';
+      meta.textContent = [firstValue(item, ['category', 'primaryCategory', 'type']), created].filter(Boolean).join(' • ');
+      titleWrap.append(title, meta);
+      head.appendChild(titleWrap);
+      card.appendChild(head);
+
+      const description = firstValue(item, ['description']);
+      if (description) {
+        const paragraph = document.createElement('p');
+        paragraph.className = 'description';
+        paragraph.textContent = description;
+        card.appendChild(paragraph);
+      }
+
+      const details = document.createElement('div');
+      details.className = 'details';
+      addDetail(details, 'Address', [item.address, item.city, item.state, item.zip || item.zipCode].filter(Boolean).join(', '));
+      addDetail(details, 'Phone', firstValue(item, ['phone']));
+      addDetail(details, 'Email', firstValue(item, ['email']));
+      addDetail(details, 'Website', firstValue(item, ['website']));
+      addDetail(details, 'Instagram', firstValue(item, ['instagram', 'instagramUrl']));
+      addDetail(details, 'Submission ID', id);
+      card.appendChild(details);
+
+      const actions = document.createElement('div');
+      actions.className = 'actions';
+      const badgeWrap = document.createElement('div');
+      const badgeLabel = document.createElement('label');
+      badgeLabel.textContent = 'Badge';
+      const badge = document.createElement('select');
+      for (const [value, label] of [['none', 'No badge'], ['linkfam_verified', 'LinkFam Verified'], ['community_partner', 'Community Partner']]) {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = label;
+        badge.appendChild(option);
+      }
+      badge.value = textValue(item.badgeStatus) || 'none';
+      badgeWrap.append(badgeLabel, badge);
+
+      const approve = document.createElement('button');
+      approve.type = 'button';
+      approve.textContent = 'Approve';
+      approve.addEventListener('click', () => reviewSubmission(card, item, 'approve', badge.value));
+      const deny = document.createElement('button');
+      deny.type = 'button';
+      deny.className = 'danger';
+      deny.textContent = 'Deny';
+      deny.addEventListener('click', () => reviewSubmission(card, item, 'deny', badge.value));
+      actions.append(badgeWrap, approve, deny);
+      card.appendChild(actions);
+      return card;
+    }
+
+    async function loadSubmissions() {
+      clearMessage('adminMessage');
+      loading.classList.remove('hidden');
+      submissionList.replaceChildren();
+      try {
+        const results = await cloudFunction('adminPendingSubmissions', { type: currentType });
+        loading.classList.add('hidden');
+        if (!Array.isArray(results) || results.length === 0) {
+          const empty = document.createElement('div');
+          empty.className = 'empty card';
+          empty.textContent = `No pending ${currentType} submissions.`;
+          submissionList.appendChild(empty);
+          return;
+        }
+        results.forEach(item => submissionList.appendChild(renderSubmission(item)));
+      } catch (error) {
+        loading.classList.add('hidden');
+        showMessage('adminMessage', error.message, 'error');
+      }
+    }
+
+    async function reviewSubmission(card, item, action, badgeStatus) {
+      const id = textValue(item.objectId);
+      if (!id) return showMessage('adminMessage', 'This submission has no objectId.', 'error');
+      const buttons = card.querySelectorAll('button, select');
+      buttons.forEach(control => control.disabled = true);
+      clearMessage('adminMessage');
+      try {
+        if (action === 'approve') {
+          const functionName = currentType === 'business' ? 'promoteBusiness' : 'promoteCommunity';
+          await cloudFunction(functionName, { objectId: id, badgeStatus });
+          showMessage('adminMessage', 'Submission approved and published.', 'success');
+        } else {
+          await cloudFunction('denySubmission', { type: currentType, objectId: id });
+          showMessage('adminMessage', 'Submission denied.', 'success');
+        }
+        card.remove();
+        if (!submissionList.children.length) loadSubmissions();
+      } catch (error) {
+        buttons.forEach(control => control.disabled = false);
+        showMessage('adminMessage', error.message, 'error');
+      }
+    }
+
+    async function verifySession() {
+      if (!sessionToken) return;
+      try {
+        const status = await cloudFunction('adminStatus');
+        document.getElementById('signedInAs').textContent = status.email || status.objectId || '';
+        loginView.classList.add('hidden');
+        adminView.classList.remove('hidden');
+        await loadSubmissions();
+      } catch (_) {
+        sessionToken = '';
+        sessionStorage.removeItem(SESSION_KEY);
+      }
+    }
+
+    document.getElementById('loginForm').addEventListener('submit', async event => {
+      event.preventDefault();
+      clearMessage('loginMessage');
+      const button = document.getElementById('loginButton');
+      button.disabled = true;
+      button.textContent = 'Checking…';
+      try {
+        const result = await parseRequest('/login', {
+          authenticated: false,
+          body: {
+            username: document.getElementById('username').value.trim(),
+            password: document.getElementById('password').value
+          }
+        });
+        sessionToken = result.sessionToken || '';
+        if (!sessionToken) throw new Error('Back4App did not return a session.');
+        sessionStorage.setItem(SESSION_KEY, sessionToken);
+        await verifySession();
+        if (!adminView.classList.contains('hidden')) document.getElementById('password').value = '';
+        else throw new Error('This account is not authorized as a LinkFam administrator.');
+      } catch (error) {
+        sessionToken = '';
+        sessionStorage.removeItem(SESSION_KEY);
+        showMessage('loginMessage', error.message, 'error');
+      } finally {
+        button.disabled = false;
+        button.textContent = 'Sign In';
+      }
+    });
+
+    document.querySelectorAll('[data-type]').forEach(button => {
+      button.addEventListener('click', () => {
+        currentType = button.dataset.type;
+        document.querySelectorAll('[data-type]').forEach(tab => tab.classList.toggle('active', tab === button));
+        loadSubmissions();
+      });
+    });
+
+    document.getElementById('logoutButton').addEventListener('click', async () => {
+      try { await parseRequest('/logout', { body: {} }); } catch (_) {}
+      sessionToken = '';
+      sessionStorage.removeItem(SESSION_KEY);
+      adminView.classList.add('hidden');
+      loginView.classList.remove('hidden');
+    });
+
+    verifySession();
+  </script>
+</body>
+</html>
