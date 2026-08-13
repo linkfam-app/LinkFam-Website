@@ -224,9 +224,9 @@
           <textarea id="description" maxlength="500" placeholder="Briefly describe what they offer"></textarea>
           <p class="small">Maximum 500 characters.</p>
 
-          <label for="imageFile">Image / Logo</label>
+          <label for="imageFile" id="imageLabel">Image / Logo</label>
           <input id="imageFile" type="file" accept="image/*" />
-          <p class="small">Optional. Upload a logo, storefront, flyer, or clear image. Max 5 MB.</p>
+          <p class="small" id="imageHelp">Upload a logo, storefront, flyer, or clear image. Max 5 MB.</p>
           <img id="imagePreview" class="image-preview" alt="Selected image preview" />
 
           <button type="button" onclick="nextStep()">Next</button>
@@ -412,6 +412,10 @@
       byId("nameLabel").textContent = type === "Business" ? "Business name" : "Resource name";
       byId("categoryLabel").textContent = type === "Business" ? "Business category/type" : "Resource category/type";
       byId("organizationGroup").style.display = type === "Community Resource" ? "block" : "none";
+      byId("imageLabel").textContent = type === "Business" ? "Image / Logo *" : "Image / Logo";
+      byId("imageHelp").textContent = type === "Business"
+        ? "Required. Upload a logo, storefront, or clear image of the business. Max 5 MB."
+        : "Optional. Upload a logo, storefront, flyer, or clear image. Max 5 MB.";
     }
 
     function nextStep() {
@@ -459,6 +463,20 @@
           keepVisible(byId("category"));
           return false;
         }
+
+        if (getValue("submissionType") === "Business") {
+          var imageFile = byId("imageFile").files && byId("imageFile").files[0];
+          if (!imageFile) {
+            showStatus("error", "Please add a photo or logo for the business.");
+            keepVisible(byId("imageFile"));
+            return false;
+        }
+        if (!compressedImageBlob) {
+          showStatus("error", "Please wait for the selected image to finish processing.");
+          keepVisible(byId("imageFile"));
+          return false;
+        }
+      }
 
         if (getValue("description").length > 500) {
           showStatus("error", "Please shorten the description to 500 characters or less.");
